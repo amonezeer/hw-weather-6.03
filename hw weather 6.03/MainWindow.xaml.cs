@@ -3,6 +3,7 @@ using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media.Imaging;
 
 namespace WeatherApp
 {
@@ -30,8 +31,7 @@ namespace WeatherApp
             }
 
             string apiKey = "077e7a7c778d64721df26f58c896c48b";
-            string baseUrl = "http://api.openweathermap.org/data/2.5/weather";
-            string url = $"{baseUrl}?q={cityName}&appid={apiKey}&units=metric&lang=uk";
+            string url = $"http://api.openweathermap.org/data/2.5/weather?q={cityName}&appid={apiKey}&units=metric&lang=uk";
 
             try
             {
@@ -45,14 +45,22 @@ namespace WeatherApp
 
                         if (weatherData != null && weatherData.Main != null && weatherData.Weather != null)
                         {
-                            WeatherInfoTextBlock.Text = $"Температура: {weatherData.Main.Temp}°C\n" +
-                                                      $"Опис: {weatherData.Weather[0].Description}\n" +
-                                                      $"Вологість: {weatherData.Main.Humidity}%\n" +
-                                                      $"Швидкість вітру: {weatherData.Wind?.Speed} м/с";
+                            string iconCode = weatherData.Weather[0].Icon;
+                            string iconUrl = $"http://openweathermap.org/img/wn/{iconCode}@2x.png";
+                            WeatherIcon.Source = new BitmapImage(new Uri(iconUrl, UriKind.Absolute));
+
+                            WeatherInfoTextBlock.Text = $"📍 {cityName}\n" +
+                            $"🌡 Температура: {weatherData.Main.Temp}°C \n" +
+                            $"🌫 Опис: {char.ToUpper(weatherData.Weather[0].Description[0]) + weatherData.Weather[0].Description.Substring(1)}\n" +
+                            $"💨 Вітер: {weatherData.Wind.Speed} м/с {GetWindDirection(weatherData.Wind.Speed)}\n" +
+                            $"💧 Вологість: {weatherData.Main.Humidity}%\n" +
+                            $"🌡 Тиск: {weatherData.Main.Pressure} гПа\n" +
+                            $"👁 Видимість: {weatherData.Visibility / 1000.0} км";
+
                         }
                         else
                         {
-                            WeatherInfoTextBlock.Text = "Не вдалося отримати інформацію про погоду. Перевірте правильність введеного міста.";
+                            WeatherInfoTextBlock.Text = "Не вдалося отримати інформацію про погоду.";
                         }
                     }
                     else
@@ -61,14 +69,19 @@ namespace WeatherApp
                     }
                 }
             }
-            catch (HttpRequestException ex)
-            {
-                WeatherInfoTextBlock.Text = "Помилка при здійсненні запиту: " + ex.Message;
-            }
             catch (Exception ex)
             {
-                WeatherInfoTextBlock.Text = "Сталася загальна помилка: " + ex.Message;
+                WeatherInfoTextBlock.Text = "Сталася помилка: " + ex.Message;
             }
+        }
+
+        private string GetWindDirection(float speed)
+        {
+            if (speed < 1) return "штиль";
+            else if (speed < 3) return "легкий бриз";
+            else if (speed < 8) return "помірний вітер";
+            else if (speed < 14) return "сильний вітер";
+            else return "штормовий вітер";
         }
 
         public class WeatherData
@@ -76,17 +89,21 @@ namespace WeatherApp
             public MainData Main { get; set; }
             public Weather[] Weather { get; set; }
             public WindData Wind { get; set; }
+            public int Visibility { get; set; }
         }
 
         public class MainData
         {
             public float Temp { get; set; }
+            public float FeelsLike { get; set; }
             public int Humidity { get; set; }
+            public int Pressure { get; set; }
         }
 
         public class Weather
         {
             public string Description { get; set; }
+            public string Icon { get; set; }
         }
 
         public class WindData
